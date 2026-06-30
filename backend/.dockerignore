@@ -1,0 +1,62 @@
+# PATHS backend — build-context exclusions.
+# Keeps the image small/secret-free. The Dockerfile does `COPY . .`, so without
+# this file the (huge) virtualenv, caches, logs and scratch dumps would all be
+# baked into the image.
+
+# ---- Python virtualenvs / build & test caches ----
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.cache/
+
+# ---- Local environment & secrets (provided via compose `environment:`) ----
+.env
+.env.*
+!.env.example
+
+# ---- Logs & runtime artifacts ----
+_run_logs/
+logs/
+*.log
+uploads/
+interview_reports/
+*.pdf
+
+# ---- Ad-hoc scratch payloads / API dumps living at the backend root ----
+# (book_payload.json, draft.json, session.json, openapi.json, …). These are
+# top-level only — JSON data under app/ or seed/ is NOT matched.
+*.json
+
+# ---- Stray nested project copy committed by accident ----
+Graduation_PATHS-main/
+
+# ---- VCS / CI / editor / OS noise ----
+.git/
+.gitignore
+.gitattributes
+.github/
+.pre-commit-config.yaml
+.gitleaks.toml
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Docs & top-level tests (not needed at runtime) ----
+docs/
+tests/

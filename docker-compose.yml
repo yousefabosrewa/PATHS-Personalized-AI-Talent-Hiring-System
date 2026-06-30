@@ -1,0 +1,128 @@
+# PATHS — full-stack orchestration (infra + backend + web), everything in Docker.
+#
+# This is an ALTERNATIVE to backend/docker-compose.yml (which only starts the
+# infra and expects you to run uvicorn on the host). Run ONE or the OTHER —
+# they publish the same host ports (5432 / 6333 / 11434) and would collide.
+#
+#   docker compose up -d --build
+#
+# First run (fresh database volume):
+#   • Apache AGE is enabled + the `paths_graph` graph is created automatically
+#     via scripts/init_age.sql mounted into the Postgres init dir.
+#   • Apply the schema and demo data once the stack is healthy:
+#       docker compose exec backend alembic upgrade head
+#       docker compose exec backend python -m seed.seed_demo_accounts   # optional
+#
+# Override any default below via a root .env file (see .env.example).
+
+services:
+  # ── PostgreSQL + Apache AGE ─────────────────────────────────────────
+  postgres:
+    image: apache/age:latest
+    container_name: paths_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-paths_db}
+      POSTGRES_USER: ${POSTGRES_USER:-paths_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Auto-enable AGE + create the graph on first init of a fresh volume.
+      - ./backend/scripts/init_age.sql:/docker-entrypoint-initdb.d/10-init-age.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paths_user} -d ${POSTGRES_DB:-paths_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Qdrant (vector store) ───────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: paths_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ── Ollama (local embeddings / LLM) ─────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: paths_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI backend ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paths_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      # Service-to-service URLs use the compose network hostnames.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-paths_user}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-paths_db}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-paths_db}
+      POSTGRES_USER: ${POSTGRES_USER:-paths_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_BASE_URL: http://ollama:11434
+      LOCAL_LLM_BASE_URL: http://ollama:11434
+      AGE_GRAPH_NAME: ${AGE_GRAPH_NAME:-paths_graph}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      SECRET_KEY: ${SECRET_KEY:-CHANGE-ME-TO-A-RANDOM-SECRET}
+      # Optional — leave blank to use the offline scoring fallback.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    ports:
+      # Published on :8001 to match the frontend default + the host workflow;
+      # the container itself listens on 8000 (see backend/Dockerfile).
+      - "8001:8000"
+
+  # ── Next.js web app ─────────────────────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Baked into the browser bundle at build time. The browser talks to the
+        # backend via the published host port, so this is localhost:8001.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+    container_name: paths_web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+
+volumes:
+  pgdata:
+    name: paths_pgdata
+  qdrant_data:
+    name: paths_qdrant_data
+  ollama_data:
+    name: paths_ollama_data

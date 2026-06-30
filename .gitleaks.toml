@@ -1,0 +1,63 @@
+# gitleaks configuration — PATHS-182
+# https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+#
+# Install:  brew install gitleaks   (or scoop install gitleaks on Windows)
+# Run:      gitleaks detect --source . --verbose
+# CI gate:  see .github/workflows/ci.yml  (secrets-scan job)
+
+title = "PATHS gitleaks config"
+
+# ── Extend the default ruleset ─────────────────────────────────────────────
+[extend]
+useDefault = true   # includes all built-in Gitleaks rules
+
+# ── Custom rules for PATHS-specific patterns ──────────────────────────────
+[[rules]]
+id          = "paths-secret-key"
+description = "PATHS SECRET_KEY exposed"
+regex       = '''(?i)secret[_-]?key\s*[:=]\s*["\']?[A-Za-z0-9+/]{32,}["\']?'''
+tags        = ["paths", "auth"]
+
+[[rules]]
+id          = "openrouter-api-key"
+description = "OpenRouter API key"
+regex       = '''sk-or-[A-Za-z0-9\-]{20,}'''
+tags        = ["ai", "openrouter"]
+
+[[rules]]
+id          = "fly-api-token"
+description = "Fly.io API token"
+regex       = '''FlyV1\s+[A-Za-z0-9+/=]{20,}'''
+tags        = ["fly", "deploy"]
+
+# ── Allowlist — paths that intentionally contain fake credentials ──────────
+[allowlist]
+description = "Ignore test fixtures and documentation examples"
+paths = [
+    # alembic migration stubs (contain placeholder DB URLs)
+    '''alembic/versions/.*\.py''',
+    # test files legitimately contain fake/placeholder secrets (fixtures,
+    # "does the key leak into errors?" tests, etc.)
+    '''tests/.*\.py''',
+    '''tests/.*fixtures.*''',
+    '''tests/.*conftest.*''',
+    # docs may show example env-var values
+    '''docs/.*\.md''',
+    '''README.*\.md''',
+    # seed script uses fake data
+    '''seed/.*''',
+    # local dev artifacts (saved API request/response dumps). Removed from the
+    # tree, but still in earlier commit history, which gitleaks also scans.
+    '''.*login\.json''',
+    '''.*(book_payload|draft|draft_payload|history|send)\.json''',
+]
+regexes = [
+    # Explicitly fake patterns used in comments / examples
+    '''CHANGE-ME-TO-A-RANDOM-SECRET''',
+    '''ci-test-secret-key''',
+    '''change_me''',
+    '''sk_test_PLACEHOLDER''',
+    '''whsec_PLACEHOLDER''',
+    # obviously-fake key from test_api_key_does_not_leak_into_error
+    '''sk-very-secret-1234567890''',
+]

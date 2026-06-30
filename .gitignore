@@ -1,0 +1,78 @@
+# Dependencies
+**/node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/secrets/
+backend/uploads/
+
+# Local-only editor / agent config
+**/.claude/settings.local.json
+*.json.key
+*credentials*.json
+.mcp.json
+
+# Build / caches
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+coverage/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+_run_logs/
+
+# Runtime artifacts & generated output
+backend/uploads/
+backend/interview_reports/
+backend/transcripts/
+
+# Local scratch / manual-API-test dumps at the backend root (kept out of git).
+# These are top-level only — real JSON/PDF assets under app/, seed/, docs/ are
+# unaffected.
+/backend/*.json
+/backend/*.pdf
+
+# Saved API request/response dumps used during local dev (never commit — a
+# login.json can leak a real JWT). Matched anywhere in the tree.
+**/login.json
+**/book_payload.json
+**/draft.json
+**/draft_payload.json
+**/history.json
+**/send.json
+
+# Accidental nested project copies
+**/Graduation_PATHS-main/
+
+# gitleaks local binary (downloaded for ad-hoc scans)
+.tmp_gl/

@@ -1,0 +1,46 @@
+# Infrastructure only — the FastAPI backend runs on the host (uvicorn), not in a container.
+services:
+  # ── PostgreSQL with Apache AGE ──────────────────────────────────────
+  postgres:
+    image: apache/age:latest
+    container_name: paths_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paths_db
+      POSTGRES_USER: paths_user
+      POSTGRES_PASSWORD: change_me
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paths_user -d paths_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Qdrant ──────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: paths_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ── Ollama ──────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: paths_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  pgdata:
+  qdrant_data:
+  ollama_data:

@@ -1,0 +1,43 @@
+# PATHS frontend — build-context exclusions (context is the workspace root).
+# Dependencies are reinstalled from the lockfile inside the image and the
+# Next.js build output is regenerated, so neither should be copied in.
+
+# ---- Dependencies (pnpm reinstalls from the frozen lockfile) ----
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# ---- Next.js / Turbopack build output & caches ----
+.next/
+**/.next/
+.turbo/
+**/.turbo/
+out/
+**/out/
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# ---- Local env files (NEXT_PUBLIC_API_URL is passed in as a build ARG) ----
+.env.local
+.env*.local
+**/.env.local
+**/.env*.local
+
+# ---- Coverage / test artifacts ----
+coverage/
+**/coverage/
+
+# ---- VCS / editor / OS noise ----
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+
+# ---- Docker files themselves ----
+Dockerfile
+**/Dockerfile
+docker-compose*.yml
+.dockerignore

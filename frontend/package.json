@@ -1,0 +1,10 @@
+{
+  "name": "paths-frontend",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "dev": "pnpm --filter @paths/web dev",
+    "build": "pnpm --filter @paths/web build",
+    "lint": "pnpm --filter @paths/web lint"
+  }
+}

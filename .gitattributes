@@ -1,0 +1,3 @@
+# Keep shell scripts LF so they run inside Linux containers regardless of the
+# checkout platform (Windows clones would otherwise produce CRLF).
+*.sh text eol=lf
